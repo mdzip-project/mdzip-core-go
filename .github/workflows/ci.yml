@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, Go ${{ matrix.go }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        go: [stable]
+        include:
+          - os: ubuntu-latest
+            go: "1.26.x" # minimum supported (go.mod)
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go }}
+
+      # Check every archive the tests write with the mdz CLI's validator.
+      - if: matrix.os == 'ubuntu-latest' && matrix.go == 'stable'
+        uses: mdzip-project/setup-mdz@v1
+        with:
+          version: 2.1.0
+      - if: matrix.os == 'ubuntu-latest' && matrix.go == 'stable'
+        run: echo "MDZ_REQUIRED=1" >> "$GITHUB_ENV"
+
+      # Runs the spec fixtures (TestFixturesUnchanged checks them against
+      # SPEC-FIXTURES.json) and prints the conformance results table.
+      - run: go test -v -count=1 ./...
+      - run: go vet ./...
+      - if: matrix.os == 'ubuntu-latest'
+        name: gofmt
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then echo "Not gofmt-formatted:"; echo "$out"; exit 1; fi

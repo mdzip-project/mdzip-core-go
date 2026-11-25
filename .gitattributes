@@ -1,0 +1,3 @@
+# Fixtures are byte-for-byte copies from a spec tag (checked against SPEC-FIXTURES.json).
+testdata/fixtures/** -text
+*.go text eol=lf
